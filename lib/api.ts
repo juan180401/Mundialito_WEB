@@ -2,10 +2,11 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export async function apiFetch(endpoint: string, options?: RequestInit) {
   const response = await fetch(`${API_URL}${endpoint}`, {
+    ...options,
     headers: {
       "Content-Type": "application/json",
+      ...(options?.headers || {}),
     },
-    ...options,
   });
 
   if (!response.ok) {
@@ -13,7 +14,6 @@ export async function apiFetch(endpoint: string, options?: RequestInit) {
     throw new Error(errorText || "Error en la petición");
   }
 
-  //Manejar 204
   if (response.status === 204) {
     return null;
   }

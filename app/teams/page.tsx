@@ -14,11 +14,60 @@ export default function TeamsPage() {
   message: string;
 } | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [newTeamName, setNewTeamName] = useState("");
 
   const [pageNumber, setPageNumber] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [pageSize, setPageSize] = useState(2);
   const [sortDirection, setSortDirection] = useState<"ASC" | "DESC">("ASC");
+
+  async function handleCreate() {
+    if (!newTeamName.trim()) {
+      setAlert({
+        type: "warning",
+        message: "El nombre del equipo es obligatorio",
+      });
+      return;
+    }
+
+    try {
+      await apiFetch("/api/Teams", {
+        method: "POST",
+        headers: {
+          "Idempotency-Key": crypto.randomUUID(),
+        },
+        body: JSON.stringify({
+          name: newTeamName,
+        }),
+      });
+
+      setAlert({
+        type: "success",
+        message: `Equipo ${newTeamName} creado correctamente`,
+      });
+
+      setNewTeamName("");
+      setIsCreating(false);
+      setPageNumber(1);
+
+      // Recargar datos
+      const data = (await apiFetch(
+        `/api/Teams?pageNumber=1&pageSize=${pageSize}&sortBy=Name&sortDirection=${sortDirection}`
+      )) as PagedResponse<Team>;
+
+      setTeams(data.data);
+      setTotalPages(data.totalPages);
+
+    } catch {
+      setAlert({
+        type: "error",
+        message: "Error al crear el equipo",
+      });
+    }
+
+    setTimeout(() => setAlert(null), 3000);
+  }
 
   async function handleDelete(id: string) {
     const confirmDelete = confirm("¿Seguro que deseas eliminar este equipo?");
@@ -34,7 +83,7 @@ export default function TeamsPage() {
       setTeams((prev) => prev.filter((t) => t.id !== id));
 
       setAlert({
-        type: "error", // 🔴 porque es acción destructiva
+        type: "error", // Debido a que es eliminación
         message: `Equipo ${deletedTeam?.name ?? ""} eliminado correctamente`,
       });
 
@@ -131,7 +180,18 @@ export default function TeamsPage() {
             </select>
           </label>
         </div>
-
+        <button
+          onClick={() => setIsCreating(!isCreating)}
+          style={{
+            padding: "6px 12px",
+            backgroundColor: "#003366",
+            color: "#66ccff",
+            border: "1px solid #006699",
+            cursor: "pointer",
+          }}
+        >
+          ➕ Agregar Equipo
+        </button>
         <button
           onClick={() => {
             setSortDirection(sortDirection === "ASC" ? "DESC" : "ASC");
@@ -148,7 +208,43 @@ export default function TeamsPage() {
           Orden: {sortDirection}
         </button>
       </div>
+      {isCreating && (
+        <div
+          style={{
+            marginBottom: "20px",
+            padding: "15px",
+            border: "1px solid #444",
+            borderRadius: "6px",
+          }}
+        >
+          <input
+            type="text"
+            placeholder="Nombre del equipo"
+            value={newTeamName}
+            onChange={(e) => setNewTeamName(e.target.value)}
+            style={{
+              padding: "6px",
+              marginRight: "10px",
+              backgroundColor: "#111",
+              color: "white",
+              border: "1px solid #555",
+            }}
+          />
 
+          <button
+            onClick={handleCreate}
+            style={{
+              padding: "6px 12px",
+              backgroundColor: "#003300",
+              color: "#00ff88",
+              border: "1px solid #006600",
+              cursor: "pointer",
+            }}
+          >
+            Guardar
+          </button>
+        </div>
+      )}
       {/* Estados */}
       {loading && <p>Cargando equipos...</p>}
 
