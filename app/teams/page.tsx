@@ -5,10 +5,14 @@ import { apiFetch } from "@/lib/api";
 import { Team } from "@/types/team";
 import { PagedResponse } from "@/types/paged-response";
 import Pagination from "@/components/Pagination";
+import AlertMessage from "@/components/AlertMessage";
 
 export default function TeamsPage() {
   const [teams, setTeams] = useState<Team[]>([]);
-  const [error, setError] = useState("");
+  const [alert, setAlert] = useState<{
+  type: "success" | "error" | "warning" | "info";
+  message: string;
+} | null>(null);
   const [loading, setLoading] = useState(false);
 
   const [pageNumber, setPageNumber] = useState(1);
@@ -16,31 +20,70 @@ export default function TeamsPage() {
   const [pageSize, setPageSize] = useState(2);
   const [sortDirection, setSortDirection] = useState<"ASC" | "DESC">("ASC");
 
-  useEffect(() => {
-    async function loadTeams() {
-      setLoading(true);
-      setError("");
+  async function handleDelete(id: string) {
+    const confirmDelete = confirm("¿Seguro que deseas eliminar este equipo?");
+    if (!confirmDelete) return;
 
-      try {
-        const data = (await apiFetch(
-          `/api/Teams?pageNumber=${pageNumber}&pageSize=${pageSize}&sortBy=Name&sortDirection=${sortDirection}`
-        )) as PagedResponse<Team>;
+    try {
+      const deletedTeam = teams.find((t) => t.id === id);
 
-        setTeams(data.data);
-        setTotalPages(data.totalPages);
-      } catch (err: unknown) {
-        if (err instanceof Error) {
-          setError(err.message);
-        } else {
-          setError("Error desconocido");
-        }
-      } finally {
-        setLoading(false);
-      }
+      await apiFetch(`/api/Teams/${id}`, {
+        method: "DELETE",
+      });
+
+      setTeams((prev) => prev.filter((t) => t.id !== id));
+
+      setAlert({
+        type: "error", // 🔴 porque es acción destructiva
+        message: `Equipo ${deletedTeam?.name ?? ""} eliminado correctamente`,
+      });
+
+      setTimeout(() => setAlert(null), 3000);
+
+    } catch {
+      setAlert({
+        type: "error",
+        message: "Error al eliminar el equipo",
+      });
+
+      setTimeout(() => setAlert(null), 3000);
     }
+  }
 
-    loadTeams();
-  }, [pageNumber, pageSize, sortDirection]);
+  useEffect(() => {
+  async function loadTeams() {
+    setLoading(true);
+
+    try {
+      const data = (await apiFetch(
+        `/api/Teams?pageNumber=${pageNumber}&pageSize=${pageSize}&sortBy=Name&sortDirection=${sortDirection}`
+      )) as PagedResponse<Team>;
+
+      setTeams(data.data);
+      setTotalPages(data.totalPages);
+
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setAlert({
+          type: "error",
+          message: err.message,
+        });
+      } else {
+        setAlert({
+          type: "error",
+          message: "Error desconocido",
+        });
+      }
+
+      setTimeout(() => setAlert(null), 3000);
+
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  loadTeams();
+}, [pageNumber, pageSize, sortDirection]);
 
   return (
     <div
@@ -51,6 +94,11 @@ export default function TeamsPage() {
       }}
     >
       <h2 style={{ marginBottom: "20px" }}>Equipos</h2>
+
+      {/* Alertas reutilizables */}
+      {alert && (
+        <AlertMessage type={alert.type} message={alert.message} />
+      )}
 
       {/* Controles */}
       <div
@@ -103,10 +151,9 @@ export default function TeamsPage() {
 
       {/* Estados */}
       {loading && <p>Cargando equipos...</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
 
       {/* Tabla */}
-      {!loading && !error && (
+      {!loading && (
         <table
           style={{
             width: "100%",
@@ -118,25 +165,57 @@ export default function TeamsPage() {
             <tr style={{ backgroundColor: "#1a1a1a" }}>
               <th
                 style={{
-                  textAlign: "left",
                   padding: "10px",
-                  borderBottom: "1px solid #444",
+                  border: "1px solid #444",
+                  textAlign: "left",
                 }}
               >
                 Nombre
               </th>
+              <th
+                style={{
+                  padding: "10px",
+                  border: "1px solid #444",
+                  textAlign: "center",
+                }}
+              >
+                Acciones
+              </th>
             </tr>
           </thead>
+
           <tbody>
             {teams.map((team) => (
               <tr key={team.id}>
                 <td
                   style={{
                     padding: "10px",
-                    borderBottom: "1px solid #333",
+                    border: "1px solid #333",
                   }}
                 >
                   {team.name}
+                </td>
+
+                <td
+                  style={{
+                    padding: "10px",
+                    border: "1px solid #333",
+                    textAlign: "center",
+                  }}
+                >
+                  <button
+                    onClick={() => handleDelete(team.id)}
+                    style={{
+                      fontSize: "18px",
+                      padding: "6px 10px",
+                      backgroundColor: "#330000",
+                      color: "#ff4d4d",
+                      border: "1px solid #aa0000",
+                      cursor: "pointer",
+                    }}
+                  >
+                    🗑
+                  </button>
                 </td>
               </tr>
             ))}

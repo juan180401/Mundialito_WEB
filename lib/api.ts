@@ -9,8 +9,13 @@ export async function apiFetch(endpoint: string, options?: RequestInit) {
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => null);
-    throw new Error(error?.message || "Error en la petición");
+    const errorText = await response.text();
+    throw new Error(errorText || "Error en la petición");
+  }
+
+  //Manejar 204
+  if (response.status === 204) {
+    return null;
   }
 
   return response.json();
