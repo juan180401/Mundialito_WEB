@@ -4,18 +4,26 @@ import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { Team } from "@/types/team";
 import { PagedResponse } from "@/types/paged-response";
+import Pagination from "@/components/Pagination";
 
 export default function TeamsPage() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
   const [pageNumber, setPageNumber] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [pageSize, setPageSize] = useState(2);
+  const [sortDirection, setSortDirection] = useState<"ASC" | "DESC">("ASC");
 
   useEffect(() => {
     async function loadTeams() {
+      setLoading(true);
+      setError("");
+
       try {
         const data = (await apiFetch(
-          `/api/Teams?pageNumber=${pageNumber}&pageSize=2&sortBy=Name&sortDirection=ASC`
+          `/api/Teams?pageNumber=${pageNumber}&pageSize=${pageSize}&sortBy=Name&sortDirection=${sortDirection}`
         )) as PagedResponse<Team>;
 
         setTeams(data.data);
@@ -26,45 +34,121 @@ export default function TeamsPage() {
         } else {
           setError("Error desconocido");
         }
+      } finally {
+        setLoading(false);
       }
     }
 
     loadTeams();
-  }, [pageNumber]);
+  }, [pageNumber, pageSize, sortDirection]);
 
   return (
-    <main style={{ padding: "20px" }}>
-      <h1>Equipos</h1>
+    <div
+      style={{
+        border: "1px solid #333",
+        padding: "25px",
+        borderRadius: "8px",
+      }}
+    >
+      <h2 style={{ marginBottom: "20px" }}>Equipos</h2>
 
-      {error && <p style={{ color: "red" }}>{error}</p>}
+      {/* Controles */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "20px",
+        }}
+      >
+        <div>
+          <label>
+            Registros por página:{" "}
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setPageNumber(1);
+              }}
+              style={{
+                padding: "5px",
+                backgroundColor: "#111",
+                color: "white",
+                border: "1px solid #555",
+              }}
+            >
+              <option value={2}>2</option>
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+            </select>
+          </label>
+        </div>
 
-      <ul>
-        {teams.map((team) => (
-          <li key={team.id}>{team.name}</li>
-        ))}
-      </ul>
-
-      <div style={{ marginTop: "20px" }}>
         <button
-          onClick={() => setPageNumber((prev) => Math.max(prev - 1, 1))}
-          disabled={pageNumber === 1}
+          onClick={() => {
+            setSortDirection(sortDirection === "ASC" ? "DESC" : "ASC");
+            setPageNumber(1);
+          }}
+          style={{
+            padding: "6px 12px",
+            backgroundColor: "#222",
+            color: "white",
+            border: "1px solid #555",
+            cursor: "pointer",
+          }}
         >
-          Anterior
-        </button>
-
-        <span style={{ margin: "0 10px" }}>
-          Página {pageNumber} de {totalPages}
-        </span>
-
-        <button
-          onClick={() =>
-            setPageNumber((prev) => Math.min(prev + 1, totalPages))
-          }
-          disabled={pageNumber === totalPages}
-        >
-          Siguiente
+          Orden: {sortDirection}
         </button>
       </div>
-    </main>
+
+      {/* Estados */}
+      {loading && <p>Cargando equipos...</p>}
+      {error && <p style={{ color: "red" }}>{error}</p>}
+
+      {/* Tabla */}
+      {!loading && !error && (
+        <table
+          style={{
+            width: "100%",
+            borderCollapse: "collapse",
+            marginBottom: "20px",
+          }}
+        >
+          <thead>
+            <tr style={{ backgroundColor: "#1a1a1a" }}>
+              <th
+                style={{
+                  textAlign: "left",
+                  padding: "10px",
+                  borderBottom: "1px solid #444",
+                }}
+              >
+                Nombre
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {teams.map((team) => (
+              <tr key={team.id}>
+                <td
+                  style={{
+                    padding: "10px",
+                    borderBottom: "1px solid #333",
+                  }}
+                >
+                  {team.name}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      <Pagination
+        pageNumber={pageNumber}
+        totalPages={totalPages}
+        onPageChange={(page) => setPageNumber(page)}
+      />
+    </div>
   );
 }

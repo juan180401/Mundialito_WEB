@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Link from "next/link";
+import BackButton from "@/components/BackButton";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -27,7 +29,16 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <div
+          style={{
+            maxWidth: "900px",
+            margin: "0 auto",
+            padding: "40px 20px",
+          }}
+        >
+          <BackButton />
+          {children}
+        </div>
       </body>
     </html>
   );
