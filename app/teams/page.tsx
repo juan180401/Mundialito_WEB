@@ -10,12 +10,14 @@ import AlertMessage from "@/components/AlertMessage";
 export default function TeamsPage() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [alert, setAlert] = useState<{
-  type: "success" | "error" | "warning" | "info";
+  type: "success" | "error" | "warning" | "info" | "update";
   message: string;
 } | null>(null);
   const [loading, setLoading] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [newTeamName, setNewTeamName] = useState("");
+  const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState("");
 
   const [pageNumber, setPageNumber] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -63,6 +65,50 @@ export default function TeamsPage() {
       setAlert({
         type: "error",
         message: "Error al crear el equipo",
+      });
+    }
+
+    setTimeout(() => setAlert(null), 3000);
+  }
+
+  async function handleUpdate() {
+    if (!editingTeamId) return;
+
+    if (!editingName.trim()) {
+      setAlert({
+        type: "warning",
+        message: "El nombre no puede estar vacío",
+      });
+      return;
+    }
+
+    try {
+      await apiFetch(`/api/Teams/${editingTeamId}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          id: editingTeamId,
+          name: editingName,
+        }),
+      });
+
+      setTeams((prev) =>
+        prev.map((t) =>
+          t.id === editingTeamId ? { ...t, name: editingName } : t
+        )
+      );
+
+      setAlert({
+        type: "update",
+        message: "Equipo actualizado correctamente",
+      });
+
+      setEditingTeamId(null);
+      setEditingName("");
+
+    } catch {
+      setAlert({
+        type: "error",
+        message: "Error al actualizar el equipo",
       });
     }
 
@@ -289,7 +335,20 @@ export default function TeamsPage() {
                     border: "1px solid #333",
                   }}
                 >
-                  {team.name}
+                  {editingTeamId === team.id ? (
+                    <input
+                      value={editingName}
+                      onChange={(e) => setEditingName(e.target.value)}
+                      style={{
+                        padding: "6px",
+                        backgroundColor: "#111",
+                        color: "white",
+                        border: "1px solid #555",
+                      }}
+                    />
+                  ) : (
+                    team.name
+                  )}
                 </td>
 
                 <td
@@ -299,6 +358,39 @@ export default function TeamsPage() {
                     textAlign: "center",
                   }}
                 >
+                  <button
+                    onClick={() => {
+                      setEditingTeamId(team.id);
+                      setEditingName(team.name);
+                    }}
+                    style={{
+                      marginRight: "8px",
+                      fontSize: "16px",
+                      padding: "6px 10px",
+                      backgroundColor: "#332200",
+                      color: "#ffaa00",
+                      border: "1px solid #cc8800",
+                      cursor: "pointer",
+                    }}
+                  >
+                    ✏
+                  </button>
+                  {editingTeamId === team.id && (
+                    <button
+                      onClick={handleUpdate}
+                      style={{
+                        marginRight: "8px",
+                        fontSize: "16px",
+                        padding: "6px 10px",
+                        backgroundColor: "#332200",
+                        color: "#ffaa00",
+                        border: "1px solid #cc8800",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Actualizar
+                    </button>
+                  )}
                   <button
                     onClick={() => handleDelete(team.id)}
                     style={{

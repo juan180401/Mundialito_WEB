@@ -1,7 +1,7 @@
 "use client";
 
 interface AlertMessageProps {
-  type: "success" | "error" | "warning" | "info";
+  type: "success" | "error" | "warning" | "info" | "update";
   message: string;
 }
 
@@ -31,6 +31,11 @@ export default function AlertMessage({
       backgroundColor: "#001f33",
       color: "#33ccff",
       border: "1px solid #006699",
+    },
+    update: {
+        backgroundColor: "#332200",
+        color: "#ffaa00",
+        border: "1px solid #cc8800",
     },
   };
 
