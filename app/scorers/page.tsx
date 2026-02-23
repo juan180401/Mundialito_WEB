@@ -282,10 +282,10 @@ export default function TopScorersPage() {
             <thead>
               <tr>
                 <th style={{ width: 50 }}>#</th>
-                <th onClick={() => handleSort("playerName")}>
+                <th onClick={() => handleSort("name")}>
                   Jugador {renderArrow("playerName")}
                 </th>
-                <th onClick={() => handleSort("teamName")}>
+                <th onClick={() => handleSort("team")}>
                   Equipo {renderArrow("teamName")}
                 </th>
                 <th onClick={() => handleSort("goals")}>
