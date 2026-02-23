@@ -10,9 +10,9 @@ import AlertMessage from "@/components/AlertMessage";
 export default function TeamsPage() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [alert, setAlert] = useState<{
-  type: "success" | "error" | "warning" | "info" | "update";
-  message: string;
-} | null>(null);
+    type: "success" | "error" | "warning" | "info" | "update";
+    message: string;
+  } | null>(null);
   const [loading, setLoading] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [newTeamName, setNewTeamName] = useState("");
@@ -26,46 +26,30 @@ export default function TeamsPage() {
 
   async function handleCreate() {
     if (!newTeamName.trim()) {
-      setAlert({
-        type: "warning",
-        message: "El nombre del equipo es obligatorio",
-      });
+      setAlert({ type: "warning", message: "El nombre del equipo es obligatorio" });
       return;
     }
 
     try {
       await apiFetch("/api/Teams", {
         method: "POST",
-        headers: {
-          "Idempotency-Key": crypto.randomUUID(),
-        },
-        body: JSON.stringify({
-          name: newTeamName,
-        }),
+        headers: { "Idempotency-Key": crypto.randomUUID() },
+        body: JSON.stringify({ name: newTeamName }),
       });
 
-      setAlert({
-        type: "success",
-        message: `Equipo ${newTeamName} creado correctamente`,
-      });
-
+      setAlert({ type: "success", message: `Equipo ${newTeamName} creado correctamente` });
       setNewTeamName("");
       setIsCreating(false);
       setPageNumber(1);
 
-      // Recargar datos
       const data = (await apiFetch(
         `/api/Teams?pageNumber=1&pageSize=${pageSize}&sortBy=Name&sortDirection=${sortDirection}`
       )) as PagedResponse<Team>;
 
       setTeams(data.data);
       setTotalPages(data.totalPages);
-
     } catch {
-      setAlert({
-        type: "error",
-        message: "Error al crear el equipo",
-      });
+      setAlert({ type: "error", message: "Error al crear el equipo" });
     }
 
     setTimeout(() => setAlert(null), 3000);
@@ -75,41 +59,25 @@ export default function TeamsPage() {
     if (!editingTeamId) return;
 
     if (!editingName.trim()) {
-      setAlert({
-        type: "warning",
-        message: "El nombre no puede estar vacío",
-      });
+      setAlert({ type: "warning", message: "El nombre no puede estar vacío" });
       return;
     }
 
     try {
       await apiFetch(`/api/Teams/${editingTeamId}`, {
         method: "PUT",
-        body: JSON.stringify({
-          id: editingTeamId,
-          name: editingName,
-        }),
+        body: JSON.stringify({ id: editingTeamId, name: editingName }),
       });
 
       setTeams((prev) =>
-        prev.map((t) =>
-          t.id === editingTeamId ? { ...t, name: editingName } : t
-        )
+        prev.map((t) => (t.id === editingTeamId ? { ...t, name: editingName } : t))
       );
 
-      setAlert({
-        type: "update",
-        message: "Equipo actualizado correctamente",
-      });
-
+      setAlert({ type: "update", message: "Equipo actualizado correctamente" });
       setEditingTeamId(null);
       setEditingName("");
-
     } catch {
-      setAlert({
-        type: "error",
-        message: "Error al actualizar el equipo",
-      });
+      setAlert({ type: "error", message: "Error al actualizar el equipo" });
     }
 
     setTimeout(() => setAlert(null), 3000);
@@ -121,301 +89,338 @@ export default function TeamsPage() {
 
     try {
       const deletedTeam = teams.find((t) => t.id === id);
-
-      await apiFetch(`/api/Teams/${id}`, {
-        method: "DELETE",
-      });
-
+      await apiFetch(`/api/Teams/${id}`, { method: "DELETE" });
       setTeams((prev) => prev.filter((t) => t.id !== id));
-
-      setAlert({
-        type: "error", // Debido a que es eliminación
-        message: `Equipo ${deletedTeam?.name ?? ""} eliminado correctamente`,
-      });
-
+      setAlert({ type: "error", message: `Equipo ${deletedTeam?.name ?? ""} eliminado correctamente` });
       setTimeout(() => setAlert(null), 3000);
-
     } catch {
-      setAlert({
-        type: "error",
-        message: "Error al eliminar el equipo",
-      });
-
+      setAlert({ type: "error", message: "Error al eliminar el equipo" });
       setTimeout(() => setAlert(null), 3000);
     }
   }
 
   useEffect(() => {
-  async function loadTeams() {
-    setLoading(true);
+    async function loadTeams() {
+      setLoading(true);
+      try {
+        const data = (await apiFetch(
+          `/api/Teams?pageNumber=${pageNumber}&pageSize=${pageSize}&sortBy=Name&sortDirection=${sortDirection}`
+        )) as PagedResponse<Team>;
 
-    try {
-      const data = (await apiFetch(
-        `/api/Teams?pageNumber=${pageNumber}&pageSize=${pageSize}&sortBy=Name&sortDirection=${sortDirection}`
-      )) as PagedResponse<Team>;
-
-      setTeams(data.data);
-      setTotalPages(data.totalPages);
-
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        setAlert({
-          type: "error",
-          message: err.message,
-        });
-      } else {
-        setAlert({
-          type: "error",
-          message: "Error desconocido",
-        });
+        setTeams(data.data);
+        setTotalPages(data.totalPages);
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          setAlert({ type: "error", message: err.message });
+        } else {
+          setAlert({ type: "error", message: "Error desconocido" });
+        }
+        setTimeout(() => setAlert(null), 3000);
+      } finally {
+        setLoading(false);
       }
-
-      setTimeout(() => setAlert(null), 3000);
-
-    } finally {
-      setLoading(false);
     }
-  }
 
-  loadTeams();
-}, [pageNumber, pageSize, sortDirection]);
+    loadTeams();
+  }, [pageNumber, pageSize, sortDirection]);
 
   return (
-    <div
-      style={{
-        border: "1px solid #333",
-        padding: "25px",
-        borderRadius: "8px",
-      }}
-    >
-      <h2 style={{ marginBottom: "20px" }}>Equipos</h2>
+    <>
+      <style>{`
+        .tm-wrapper {
+          background: rgba(255,255,255,0.03);
+          border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 16px;
+          padding: 32px;
+          backdrop-filter: blur(10px);
+          font-family: 'Inter', sans-serif;
+        }
 
-      {/* Alertas reutilizables */}
-      {alert && (
-        <AlertMessage type={alert.type} message={alert.message} />
-      )}
+        .tm-header {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 8px;
+        }
 
-      {/* Controles */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "20px",
-        }}
-      >
-        <div>
-          <label>
-            Registros por página:{" "}
+        .tm-title {
+          font-size: 24px;
+          font-weight: 800;
+          color: #fff;
+          letter-spacing: 2px;
+          text-transform: uppercase;
+          margin: 0;
+        }
+
+        .tm-divider {
+          height: 2px;
+          background: linear-gradient(90deg, #f5c518, transparent);
+          margin-bottom: 28px;
+          border-radius: 2px;
+        }
+
+        .tm-controls {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 12px;
+          margin-bottom: 24px;
+        }
+
+        .tm-label {
+          font-size: 12px;
+          color: rgba(255,255,255,0.45);
+          letter-spacing: 1px;
+          text-transform: uppercase;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .tm-select {
+          padding: 8px 12px;
+          background: rgba(255,255,255,0.05);
+          color: #fff;
+          border: 1px solid rgba(255,255,255,0.12);
+          border-radius: 8px;
+          font-size: 13px;
+          cursor: pointer;
+          outline: none;
+          transition: border-color 0.2s;
+        }
+
+        .tm-select:hover, .tm-select:focus { border-color: rgba(245,197,24,0.5); }
+        .tm-select option { background: #1a1a1a; }
+
+        .tm-btn {
+          padding: 8px 16px;
+          border-radius: 8px;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+          border: 1px solid;
+          letter-spacing: 0.5px;
+          transition: opacity 0.2s, transform 0.15s;
+        }
+
+        .tm-btn:hover { opacity: 0.85; transform: translateY(-1px); }
+
+        .tm-btn-add {
+          background: rgba(245,197,24,0.1);
+          color: #f5c518;
+          border-color: rgba(245,197,24,0.4);
+        }
+
+        .tm-btn-sort {
+          background: rgba(255,255,255,0.05);
+          color: rgba(255,255,255,0.7);
+          border-color: rgba(255,255,255,0.12);
+        }
+
+        .tm-btn-save {
+          background: rgba(0,220,100,0.1);
+          color: #00dc64;
+          border-color: rgba(0,220,100,0.4);
+        }
+
+        .tm-btn-update {
+          background: rgba(245,197,24,0.1);
+          color: #f5c518;
+          border-color: rgba(245,197,24,0.4);
+        }
+
+        .tm-btn-delete {
+          background: rgba(255,60,60,0.1);
+          color: #ff4d4d;
+          border-color: rgba(255,60,60,0.35);
+        }
+
+        .tm-create-box {
+          margin-bottom: 24px;
+          padding: 20px;
+          background: rgba(245,197,24,0.04);
+          border: 1px solid rgba(245,197,24,0.2);
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          flex-wrap: wrap;
+        }
+
+        .tm-input {
+          padding: 8px 14px;
+          background: rgba(255,255,255,0.05);
+          color: #fff;
+          border: 1px solid rgba(255,255,255,0.12);
+          border-radius: 8px;
+          font-size: 14px;
+          outline: none;
+          flex: 1;
+          min-width: 200px;
+          transition: border-color 0.2s;
+        }
+
+        .tm-input:focus { border-color: rgba(245,197,24,0.5); }
+        .tm-input::placeholder { color: rgba(255,255,255,0.25); }
+
+        .tm-loading {
+          text-align: center;
+          color: rgba(255,255,255,0.35);
+          padding: 40px 0;
+          letter-spacing: 2px;
+          font-size: 13px;
+        }
+
+        .tm-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 24px;
+        }
+
+        .tm-table thead tr {
+          background: rgba(245,197,24,0.08);
+        }
+
+        .tm-table th {
+          padding: 12px 16px;
+          border-bottom: 1px solid rgba(245,197,24,0.2);
+          color: rgba(255,255,255,0.6);
+          font-size: 11px;
+          letter-spacing: 2px;
+          text-transform: uppercase;
+          text-align: left;
+        }
+
+        .tm-table th.center { text-align: center; }
+
+        .tm-table td {
+          padding: 12px 16px;
+          border-bottom: 1px solid rgba(255,255,255,0.05);
+          color: rgba(255,255,255,0.85);
+          font-size: 14px;
+        }
+
+        .tm-table tbody tr { transition: background 0.15s; }
+        .tm-table tbody tr:hover { background: rgba(245,197,24,0.04); }
+
+        .tm-actions {
+          display: flex;
+          gap: 8px;
+          justify-content: center;
+        }
+      `}</style>
+
+      <div className="tm-wrapper">
+        {/* Header */}
+        <div className="tm-header">
+          <span style={{ fontSize: 28 }}>🛡️</span>
+          <h2 className="tm-title">Equipos</h2>
+        </div>
+        <div className="tm-divider" />
+
+        {alert && <AlertMessage type={alert.type} message={alert.message} />}
+
+        {/* Controles */}
+        <div className="tm-controls">
+          <label className="tm-label">
+            Por página:
             <select
+              className="tm-select"
               value={pageSize}
-              onChange={(e) => {
-                setPageSize(Number(e.target.value));
-                setPageNumber(1);
-              }}
-              style={{
-                padding: "5px",
-                backgroundColor: "#111",
-                color: "white",
-                border: "1px solid #555",
-              }}
+              onChange={(e) => { setPageSize(Number(e.target.value)); setPageNumber(1); }}
             >
               <option value={2}>2</option>
               <option value={5}>5</option>
               <option value={10}>10</option>
             </select>
           </label>
+
+          <div style={{ display: "flex", gap: "10px" }}>
+            <button
+              className="tm-btn tm-btn-sort"
+              onClick={() => { setSortDirection(sortDirection === "ASC" ? "DESC" : "ASC"); setPageNumber(1); }}
+            >
+              {sortDirection === "ASC" ? "⬆ A → Z" : "⬇ Z → A"}
+            </button>
+            <button className="tm-btn tm-btn-add" onClick={() => setIsCreating(!isCreating)}>
+              ➕ Agregar Equipo
+            </button>
+          </div>
         </div>
-        <button
-          onClick={() => setIsCreating(!isCreating)}
-          style={{
-            padding: "6px 12px",
-            backgroundColor: "#003366",
-            color: "#66ccff",
-            border: "1px solid #006699",
-            cursor: "pointer",
-          }}
-        >
-          ➕ Agregar Equipo
-        </button>
-        <button
-          onClick={() => {
-            setSortDirection(sortDirection === "ASC" ? "DESC" : "ASC");
-            setPageNumber(1);
-          }}
-          style={{
-            padding: "6px 12px",
-            backgroundColor: "#222",
-            color: "white",
-            border: "1px solid #555",
-            cursor: "pointer",
-          }}
-        >
-          Orden: {sortDirection}
-        </button>
-      </div>
-      {isCreating && (
-        <div
-          style={{
-            marginBottom: "20px",
-            padding: "15px",
-            border: "1px solid #444",
-            borderRadius: "6px",
-          }}
-        >
-          <input
-            type="text"
-            placeholder="Nombre del equipo"
-            value={newTeamName}
-            onChange={(e) => setNewTeamName(e.target.value)}
-            style={{
-              padding: "6px",
-              marginRight: "10px",
-              backgroundColor: "#111",
-              color: "white",
-              border: "1px solid #555",
-            }}
-          />
 
-          <button
-            onClick={handleCreate}
-            style={{
-              padding: "6px 12px",
-              backgroundColor: "#003300",
-              color: "#00ff88",
-              border: "1px solid #006600",
-              cursor: "pointer",
-            }}
-          >
-            Guardar
-          </button>
-        </div>
-      )}
-      {/* Estados */}
-      {loading && <p>Cargando equipos...</p>}
+        {/* Formulario crear */}
+        {isCreating && (
+          <div className="tm-create-box">
+            <input
+              className="tm-input"
+              type="text"
+              placeholder="Nombre del equipo..."
+              value={newTeamName}
+              onChange={(e) => setNewTeamName(e.target.value)}
+            />
+            <button className="tm-btn tm-btn-save" onClick={handleCreate}>
+              ✔ Guardar
+            </button>
+          </div>
+        )}
 
-      {/* Tabla */}
-      {!loading && (
-        <table
-          style={{
-            width: "100%",
-            borderCollapse: "collapse",
-            marginBottom: "20px",
-          }}
-        >
-          <thead>
-            <tr style={{ backgroundColor: "#1a1a1a" }}>
-              <th
-                style={{
-                  padding: "10px",
-                  border: "1px solid #444",
-                  textAlign: "left",
-                }}
-              >
-                Nombre
-              </th>
-              <th
-                style={{
-                  padding: "10px",
-                  border: "1px solid #444",
-                  textAlign: "center",
-                }}
-              >
-                Acciones
-              </th>
-            </tr>
-          </thead>
+        {/* Loading */}
+        {loading && <p className="tm-loading">⚽ Cargando equipos...</p>}
 
-          <tbody>
-            {teams.map((team) => (
-              <tr key={team.id}>
-                <td
-                  style={{
-                    padding: "10px",
-                    border: "1px solid #333",
-                  }}
-                >
-                  {editingTeamId === team.id ? (
-                    <input
-                      value={editingName}
-                      onChange={(e) => setEditingName(e.target.value)}
-                      style={{
-                        padding: "6px",
-                        backgroundColor: "#111",
-                        color: "white",
-                        border: "1px solid #555",
-                      }}
-                    />
-                  ) : (
-                    team.name
-                  )}
-                </td>
-
-                <td
-                  style={{
-                    padding: "10px",
-                    border: "1px solid #333",
-                    textAlign: "center",
-                  }}
-                >
-                  <button
-                    onClick={() => {
-                      setEditingTeamId(team.id);
-                      setEditingName(team.name);
-                    }}
-                    style={{
-                      marginRight: "8px",
-                      fontSize: "16px",
-                      padding: "6px 10px",
-                      backgroundColor: "#332200",
-                      color: "#ffaa00",
-                      border: "1px solid #cc8800",
-                      cursor: "pointer",
-                    }}
-                  >
-                    ✏
-                  </button>
-                  {editingTeamId === team.id && (
-                    <button
-                      onClick={handleUpdate}
-                      style={{
-                        marginRight: "8px",
-                        fontSize: "16px",
-                        padding: "6px 10px",
-                        backgroundColor: "#332200",
-                        color: "#ffaa00",
-                        border: "1px solid #cc8800",
-                        cursor: "pointer",
-                      }}
-                    >
-                      Actualizar
-                    </button>
-                  )}
-                  <button
-                    onClick={() => handleDelete(team.id)}
-                    style={{
-                      fontSize: "18px",
-                      padding: "6px 10px",
-                      backgroundColor: "#330000",
-                      color: "#ff4d4d",
-                      border: "1px solid #aa0000",
-                      cursor: "pointer",
-                    }}
-                  >
-                    🗑
-                  </button>
-                </td>
+        {/* Tabla */}
+        {!loading && (
+          <table className="tm-table">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th className="center">Acciones</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+            </thead>
+            <tbody>
+              {teams.map((team) => (
+                <tr key={team.id}>
+                  <td>
+                    {editingTeamId === team.id ? (
+                      <input
+                        className="tm-input"
+                        value={editingName}
+                        onChange={(e) => setEditingName(e.target.value)}
+                      />
+                    ) : (
+                      team.name
+                    )}
+                  </td>
+                  <td>
+                    <div className="tm-actions">
+                      <button
+                        className="tm-btn tm-btn-update"
+                        onClick={() => { setEditingTeamId(team.id); setEditingName(team.name); }}
+                      >
+                        ✏ Editar
+                      </button>
+                      {editingTeamId === team.id && (
+                        <button className="tm-btn tm-btn-save" onClick={handleUpdate}>
+                          ✔ Actualizar
+                        </button>
+                      )}
+                      <button className="tm-btn tm-btn-delete" onClick={() => handleDelete(team.id)}>
+                        🗑 Eliminar
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
 
-      <Pagination
-        pageNumber={pageNumber}
-        totalPages={totalPages}
-        onPageChange={(page) => setPageNumber(page)}
-      />
-    </div>
+        <Pagination
+          pageNumber={pageNumber}
+          totalPages={totalPages}
+          onPageChange={(page) => setPageNumber(page)}
+        />
+      </div>
+    </>
   );
 }
