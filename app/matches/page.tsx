@@ -21,10 +21,66 @@ export default function MatchesPage() {
   const [pageSize, setPageSize] = useState(5);
   const [sortBy, setSortBy] = useState("date");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const [teams, setTeams] = useState<{ id: string; name: string }[]>([]);
+  const [isCreating, setIsCreating] = useState(false);
+  const [homeTeamId, setHomeTeamId] = useState("");
+  const [awayTeamId, setAwayTeamId] = useState("");
+  const [matchDate, setMatchDate] = useState("");
 
   const [isFinishedFilter, setIsFinishedFilter] = useState<
     boolean | undefined
   >(undefined);
+
+    async function handleCreateMatch() {
+        if (!homeTeamId || !awayTeamId || !matchDate) {
+            setAlert({
+            type: "warning",
+            message: "Todos los campos son obligatorios",
+            });
+            setTimeout(() => setAlert(null), 3000);
+            return;
+        }
+
+        if (homeTeamId === awayTeamId) {
+            setAlert({
+            type: "warning",
+            message: "Un equipo no puede jugar contra sí mismo",
+            });
+            setTimeout(() => setAlert(null), 3000);
+            return;
+        }
+
+        try {
+            await apiFetch("/api/Matches", {
+            method: "POST",
+            headers: {
+                "Idempotency-Key": crypto.randomUUID(),
+            },
+            body: JSON.stringify({
+                homeTeamId,
+                awayTeamId,
+                matchDate: new Date(matchDate).toISOString(),
+            }),
+            });
+
+            setAlert({
+            type: "success",
+            message: "Partido creado correctamente",
+            });
+
+        } catch (err: unknown) {
+            setAlert({
+            type: "error",
+            message: err instanceof Error ? err.message : "Error al crear partido",
+            });
+        }
+        
+        setIsCreating(false);
+
+        setTimeout(() => {
+            setAlert(null);
+        }, 3000);
+    }
 
 
     function handleSort(column: string) {
@@ -41,42 +97,59 @@ export default function MatchesPage() {
         if (sortBy !== column) return "⬍";
         return sortDirection === "asc" ? "⬆" : "⬇";
     }
-  useEffect(() => {
-    async function loadMatches() {
-      setLoading(true);
+    useEffect(() => {
+        async function loadMatches() {
+        setLoading(true);
 
-      try {
-        const query = new URLSearchParams({
-          pageNumber: pageNumber.toString(),
-          pageSize: pageSize.toString(),
-          sortBy: sortBy,
-          sortDirection: sortDirection,
-        });
+        try {
+            const query = new URLSearchParams({
+            pageNumber: pageNumber.toString(),
+            pageSize: pageSize.toString(),
+            sortBy: sortBy,
+            sortDirection: sortDirection,
+            });
 
-        if (isFinishedFilter !== undefined) {
-          query.append("isFinished", isFinishedFilter.toString());
+            if (isFinishedFilter !== undefined) {
+            query.append("isFinished", isFinishedFilter.toString());
+            }
+
+            const data = (await apiFetch(
+            `/api/Matches?${query.toString()}`
+            )) as PagedResponse<Match>;
+
+            setMatches(data.data);
+            setTotalPages(data.totalPages);
+        } catch {
+            setAlert({
+            type: "error",
+            message: "Error al cargar partidos",
+            });
+
+            setTimeout(() => setAlert(null), 3000);
+        } finally {
+            setLoading(false);
+        }
         }
 
-        const data = (await apiFetch(
-          `/api/Matches?${query.toString()}`
-        )) as PagedResponse<Match>;
+        loadMatches();
+    }, [pageNumber, pageSize, sortBy, sortDirection, isFinishedFilter]);
+    useEffect(() => {
+        async function loadTeams() {
+            try {
+            const data = await apiFetch(
+                "/api/Teams?pageNumber=1&pageSize=100"
+            );
 
-        setMatches(data.data);
-        setTotalPages(data.totalPages);
-      } catch {
-        setAlert({
-          type: "error",
-          message: "Error al cargar partidos",
-        });
-
-        setTimeout(() => setAlert(null), 3000);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadMatches();
-  }, [pageNumber, pageSize, sortBy, sortDirection, isFinishedFilter]);
+            setTeams(data.data);
+            } catch {
+            setAlert({
+                type: "error",
+                message: "Error al cargar equipos",
+            });
+            }
+        }
+        loadTeams();
+    }, []);
 
   return (
     <div
@@ -151,8 +224,141 @@ export default function MatchesPage() {
                 <option value={5}>5</option>
                 <option value={10}>10</option>
             </select>
-            </label>
+            </label>            
           </div>
+          <button
+            onClick={() => setIsCreating(!isCreating)}
+            style={{
+                padding: "6px 12px",
+                backgroundColor: "#003366",
+                color: "#66ccff",
+                border: "1px solid #006699",
+                cursor: "pointer",
+                marginBottom: "20px"
+            }}
+            >
+            ➕ Crear Partido
+            </button>
+            {isCreating && (
+                <div
+                    style={{
+                    position: "fixed",
+                    top: 0,
+                    left: 0,
+                    width: "100vw",
+                    height: "100vh",
+                    backgroundColor: "rgba(0,0,0,0.7)",
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    zIndex: 1000,
+                    }}
+                >
+                    <div
+                    style={{
+                        backgroundColor: "#1a1a1a",
+                        padding: "25px",
+                        borderRadius: "8px",
+                        width: "400px",
+                        border: "1px solid #444",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "15px",
+                    }}
+                    >
+                        <h3 style={{ marginBottom: "10px" }}>Crear Partido</h3>
+
+                        {/* Equipo Local */}
+                        <div style={{ display: "flex", flexDirection: "column" }}>
+                        <label style={{ marginBottom: "5px" }}>Equipo Local</label>
+                        <select
+                            value={homeTeamId}
+                            onChange={(e) => setHomeTeamId(e.target.value)}
+                            style={{
+                            padding: "6px",
+                            backgroundColor: "#111",
+                            color: "white",
+                            border: "1px solid #555",
+                            }}
+                        >
+                            <option value="">Seleccione equipo local</option>
+                            {teams.map((team) => (
+                            <option key={team.id} value={team.id}>
+                                {team.name}
+                            </option>
+                            ))}
+                        </select>
+                        </div>
+
+                        {/* Equipo Visitante */}
+                        <div style={{ display: "flex", flexDirection: "column" }}>
+                        <label style={{ marginBottom: "5px" }}>Equipo Visitante</label>
+                        <select
+                            value={awayTeamId}
+                            onChange={(e) => setAwayTeamId(e.target.value)}
+                            style={{
+                            padding: "6px",
+                            backgroundColor: "#111",
+                            color: "white",
+                            border: "1px solid #555",
+                            }}
+                        >
+                            <option value="">Seleccione equipo visitante</option>
+                            {teams.map((team) => (
+                            <option key={team.id} value={team.id}>
+                                {team.name}
+                            </option>
+                            ))}
+                        </select>
+                        </div>
+
+                        {/* Fecha */}
+                        <div style={{ display: "flex", flexDirection: "column" }}>
+                        <label style={{ marginBottom: "5px" }}>Fecha y Hora</label>
+                        <input
+                            type="datetime-local"
+                            value={matchDate}
+                            onChange={(e) => setMatchDate(e.target.value)}
+                            style={{
+                            padding: "6px",
+                            backgroundColor: "#111",
+                            color: "white",
+                            border: "1px solid #555",
+                            }}
+                        />
+                        </div>
+
+                        {/* Botones */}
+                        <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                        <button
+                            onClick={() => setIsCreating(false)}
+                            style={{
+                            padding: "6px 12px",
+                            backgroundColor: "#333",
+                            color: "white",
+                            border: "1px solid #555",
+                            cursor: "pointer",
+                            }}
+                        >
+                            Cancelar
+                        </button>
+
+                        <button
+                            onClick={handleCreateMatch}
+                            style={{
+                            padding: "6px 12px",
+                            backgroundColor: "#003300",
+                            color: "#00ff88",
+                            border: "1px solid #006600",
+                            cursor: "pointer",
+                            }}
+                        >
+                            Guardar
+                        </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
 
       {loading && <p>Cargando partidos...</p>}
@@ -205,7 +411,7 @@ export default function MatchesPage() {
             {matches.map((match) => (
               <tr key={match.matchId}>
                 <td style={{ padding: "10px", border: "1px solid #333" }}>
-                  {new Date(match.matchDate).toLocaleDateString()}
+                    {new Date(match.matchDate).toLocaleString()}
                 </td>
 
                 <td style={{ padding: "10px", border: "1px solid #333" }}>
