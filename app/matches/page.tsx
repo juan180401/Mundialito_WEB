@@ -26,6 +26,37 @@ export default function MatchesPage() {
   const [homeTeamId, setHomeTeamId] = useState("");
   const [awayTeamId, setAwayTeamId] = useState("");
   const [matchDate, setMatchDate] = useState("");
+  const [isResultModalOpen, setIsResultModalOpen] = useState(false);
+  const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
+  const [homePlayers, setHomePlayers] = useState<{ id: string; name: string }[]>([]);
+  const [awayPlayers, setAwayPlayers] = useState<{ id: string; name: string }[]>([]);
+  const [homeScorers, setHomeScorers] = useState<{ playerId: string; goals: number }[]>([]);
+  const [awayScorers, setAwayScorers] = useState<{ playerId: string; goals: number }[]>([]);
+  const calculatedHomeGoals = homeScorers.reduce((sum, s) => sum + s.goals, 0);
+  const calculatedAwayGoals = awayScorers.reduce((sum, s) => sum + s.goals, 0);
+  const overlayStyle: React.CSSProperties = {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    width: "100vw",
+    height: "100vh",
+    backgroundColor: "rgba(0,0,0,0.7)",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1000,
+  };
+
+  const modalStyle: React.CSSProperties = {
+    backgroundColor: "#1a1a1a",
+    padding: "25px",
+    borderRadius: "8px",
+    width: "400px",
+    border: "1px solid #444",
+    display: "flex",
+    flexDirection: "column",
+    gap: "15px",
+  }; 
 
   const [isFinishedFilter, setIsFinishedFilter] = useState<
     boolean | undefined
@@ -82,23 +113,84 @@ export default function MatchesPage() {
         }, 3000);
     }
 
+    async function openResultModal(matchId: string) {
+        const match = matches.find(m => m.matchId === matchId);
+        if (!match) return;
 
-    function handleSort(column: string) {
-    if (sortBy === column) {
-        setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-    } else {
-        setSortBy(column);
-        setSortDirection("asc");
-    }
-    setPageNumber(1);
+        setSelectedMatchId(matchId);
+        setHomeScorers([]);
+        setAwayScorers([]);
+
+        try {
+            const homeData = await apiFetch(
+            `/api/Players?pageNumber=1&pageSize=100&teamId=${match.homeTeamId}`
+            );
+
+            const awayData = await apiFetch(
+            `/api/Players?pageNumber=1&pageSize=100&teamId=${match.awayTeamId}`
+            );
+
+            setHomePlayers(homeData.data);
+            setAwayPlayers(awayData.data);
+
+            setIsResultModalOpen(true);
+        } catch {
+            setAlert({
+            type: "error",
+            message: "Error al cargar jugadores",
+            });
+            setTimeout(() => setAlert(null), 3000);
+        }
     }
 
-    function renderArrow(column: string) {
-        if (sortBy !== column) return "⬍";
-        return sortDirection === "asc" ? "⬆" : "⬇";
+    function addHomeScorer(playerId: string, goals: number) {
+        if (!playerId || goals <= 0) return;
+
+        setHomeScorers(prev => [...prev, { playerId, goals }]);
     }
-    useEffect(() => {
-        async function loadMatches() {
+
+    function addAwayScorer(playerId: string, goals: number) {
+        if (!playerId || goals <= 0) return;
+
+        setAwayScorers(prev => [...prev, { playerId, goals }]);
+    }
+
+    async function handleRegisterResult() {
+        if (!selectedMatchId) return;
+
+        try {
+            await apiFetch(`/api/Matches/${selectedMatchId}/result`, {
+            method: "POST",
+            headers: {
+                "Idempotency-Key": crypto.randomUUID(),
+            },
+            body: JSON.stringify({
+                matchId: selectedMatchId,
+                homeGoals: calculatedHomeGoals,
+                awayGoals: calculatedAwayGoals,
+                scorers: [...homeScorers, ...awayScorers],
+            }),
+            });
+
+            setAlert({
+            type: "success",
+            message: "Resultado registrado correctamente",
+            });
+            await loadMatches();
+
+        } catch (err: unknown) {
+            setAlert({
+            type: "error",
+            message: err instanceof Error ? err.message : "Error al registrar resultado",
+            });
+        }
+
+        setIsResultModalOpen(false);
+
+        setTimeout(() => setAlert(null), 3000);
+    }
+
+    async function loadMatches() {
         setLoading(true);
 
         try {
@@ -129,10 +221,26 @@ export default function MatchesPage() {
         } finally {
             setLoading(false);
         }
-        }
+    }
 
+    function handleSort(column: string) {
+    if (sortBy === column) {
+        setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+        setSortBy(column);
+        setSortDirection("asc");
+    }
+    setPageNumber(1);
+    }
+
+    function renderArrow(column: string) {
+        if (sortBy !== column) return "⬍";
+        return sortDirection === "asc" ? "⬆" : "⬇";
+    }
+    useEffect(() => {
         loadMatches();
     }, [pageNumber, pageSize, sortBy, sortDirection, isFinishedFilter]);
+    
     useEffect(() => {
         async function loadTeams() {
             try {
@@ -404,6 +512,9 @@ export default function MatchesPage() {
                 <th style={{ padding: "10px", border: "1px solid #444" }}>
                 Resultado
                 </th>
+                <th style={{ padding: "10px", border: "1px solid #444" }}>
+                Acciones
+                </th>
             </tr>
           </thead>
 
@@ -425,18 +536,133 @@ export default function MatchesPage() {
                 <td style={{ padding: "10px", border: "1px solid #333" }}>
                   {match.isFinished
                     ? `${match.homeGoals} - ${match.awayGoals}`
-                    : "-"}
-                </td>
-
+                    : "-"}                    
+                </td>                                   
                 <td style={{ padding: "10px", border: "1px solid #333" }}>
                   {match.isFinished ? "Finalizado" : "Pendiente"}
                 </td>
+                <td style={{ padding: "10px", border: "1px solid #333", textAlign: "center" }}>
+                    {!match.isFinished && (
+                        <button
+                        onClick={() => openResultModal(match.matchId)}
+                        style={{
+                            padding: "4px 8px",
+                            backgroundColor: "#331a00",
+                            color: "#ff9933",
+                            border: "1px solid #cc6600",
+                            cursor: "pointer",
+                        }}
+                        >
+                        ⚽ Registrar
+                        </button>
+                    )}
+                </td> 
               </tr>
             ))}
           </tbody>
         </table>
       )}
+                {isResultModalOpen && (
+                    <div style={overlayStyle}>
+                        <div style={modalStyle}>
+                            <h3>Registrar Resultado</h3>
 
+                            {/* ===== LOCAL ===== */}
+                            <h4>Equipo Local</h4>
+
+                            <select id="homePlayerSelect" style={{
+                            padding: "6px",
+                            backgroundColor: "#111",
+                            color: "white",
+                            border: "1px solid #555",
+                            width: "100%"
+                            }}>
+                            <option value="">Jugador</option>
+                            {homePlayers.map(p => (
+                                <option key={p.id} value={p.id}>{p.name}</option>
+                            ))}
+                            </select>
+
+                            <input
+                            type="number"
+                            id="homeGoalsInput"
+                            min="1"
+                            placeholder="Goles"
+                            />
+
+                            <button
+                            onClick={() => {
+                                const playerId =
+                                (document.getElementById("homePlayerSelect") as HTMLSelectElement).value;
+
+                                const goals =
+                                Number(
+                                    (document.getElementById("homeGoalsInput") as HTMLInputElement).value
+                                );
+
+                                addHomeScorer(playerId, goals);
+                            }}
+                            >
+                            ➕ Agregar
+                            </button>
+
+                            <p>Total Local: {calculatedHomeGoals}</p>
+
+                            <hr />
+
+                            {/* ===== VISITANTE ===== */}
+                            <h4>Equipo Visitante</h4>
+
+                            <select id="awayPlayerSelect"style={{
+                            padding: "6px",
+                            backgroundColor: "#111",
+                            color: "white",
+                            border: "1px solid #555",
+                            width: "100%"
+                            }}>
+                            <option value="">Jugador</option>
+                            {awayPlayers.map(p => (
+                                <option key={p.id} value={p.id}>{p.name}</option>
+                            ))}
+                            </select>
+
+                            <input
+                            type="number"
+                            id="awayGoalsInput"
+                            min="1"
+                            placeholder="Goles"
+                            />
+
+                            <button
+                            onClick={() => {
+                                const playerId =
+                                (document.getElementById("awayPlayerSelect") as HTMLSelectElement).value;
+
+                                const goals =
+                                Number(
+                                    (document.getElementById("awayGoalsInput") as HTMLInputElement).value
+                                );
+
+                                addAwayScorer(playerId, goals);
+                            }}
+                            >
+                            ➕ Agregar
+                            </button>
+
+                            <p>Total Visitante: {calculatedAwayGoals}</p>
+
+                            <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+                            <button onClick={() => setIsResultModalOpen(false)}>
+                                Cancelar
+                            </button>
+
+                            <button onClick={handleRegisterResult}>
+                                Guardar
+                            </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
       <Pagination
         pageNumber={pageNumber}
         totalPages={totalPages}
