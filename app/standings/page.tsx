@@ -84,7 +84,35 @@ export default function StandingsPage() {
   return (
     <div style={{ border: "1px solid #333", padding: "25px", borderRadius: "8px" }}>
       <h2 style={{ marginBottom: "20px" }}>Tabla de Posiciones</h2>
-
+        <div
+        style={{
+            display: "flex",
+            gap: "20px",
+            marginBottom: "20px",
+            alignItems: "center",
+        }}
+        >
+            <label>
+                Registros por página:{" "}
+                <select
+                value={pageSize}
+                onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setPageNumber(1);
+                }}
+                style={{
+                    padding: "6px",
+                    backgroundColor: "#111",
+                    color: "white",
+                    border: "1px solid #555",
+                }}
+                >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                </select>
+            </label>
+        </div>
       {alert && <AlertMessage type={alert.type} message={alert.message} />}
 
       {loading && <p>Cargando...</p>}
