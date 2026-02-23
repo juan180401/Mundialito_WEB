@@ -7,11 +7,12 @@ import Pagination from "@/components/Pagination";
 import AlertMessage from "@/components/AlertMessage";
 
 interface Standing {
+  teamId: string;
   teamName: string;
   played: number;
-  wins: number;
-  draws: number;
-  losses: number;
+  won: number;
+  draw: number;
+  lost: number;
   goalsFor: number;
   goalsAgainst: number;
   goalDifference: number;
@@ -98,13 +99,62 @@ export default function StandingsPage() {
         >
           <thead>
             <tr style={{ backgroundColor: "#1a1a1a" }}>
-              <th style={{ padding: "10px", border: "1px solid #444" }}>Equipo</th>
-              <th style={{ padding: "10px", border: "1px solid #444" }}>PJ</th>
-              <th style={{ padding: "10px", border: "1px solid #444" }}>G</th>
-              <th style={{ padding: "10px", border: "1px solid #444" }}>E</th>
-              <th style={{ padding: "10px", border: "1px solid #444" }}>P</th>
-              <th style={{ padding: "10px", border: "1px solid #444" }}>GF</th>
-              <th style={{ padding: "10px", border: "1px solid #444" }}>GC</th>
+              <th
+                style={{ padding: "10px", border: "1px solid #444", cursor: "pointer" }}
+                onClick={() => handleSort("teamName")}
+              >
+                Equipo {renderArrow("teamName")}
+              </th>
+
+              <th
+                style={{ padding: "10px", border: "1px solid #444", cursor: "pointer" }}
+                onClick={() => handleSort("played")}
+              >
+                PJ {renderArrow("played")}
+              </th>
+
+              <th
+                style={{ padding: "10px", border: "1px solid #444", cursor: "pointer" }}
+                onClick={() => handleSort("won")}
+              >
+                G {renderArrow("won")}
+              </th>
+
+              <th
+                style={{ padding: "10px", border: "1px solid #444", cursor: "pointer" }}
+                onClick={() => handleSort("draw")}
+              >
+                E {renderArrow("draw")}
+              </th>
+
+              <th
+                style={{ padding: "10px", border: "1px solid #444", cursor: "pointer" }}
+                onClick={() => handleSort("lost")}
+              >
+                P {renderArrow("lost")}
+              </th>
+
+              <th
+                style={{ padding: "10px", border: "1px solid #444", cursor: "pointer" }}
+                onClick={() => handleSort("goalsFor")}
+              >
+                GF {renderArrow("goalsFor")}
+              </th>
+
+              <th
+                style={{ padding: "10px", border: "1px solid #444", cursor: "pointer" }}
+                onClick={() => handleSort("goalsAgainst")}
+              >
+                GC {renderArrow("goalsAgainst")}
+              </th>
+
+              <th
+                style={{ padding: "10px", border: "1px solid #444", cursor: "pointer" }}
+                onClick={() => handleSort("goalDifference")}
+              >
+                DG {renderArrow("goalDifference")}
+              </th>
+
               <th
                 style={{ padding: "10px", border: "1px solid #444", cursor: "pointer" }}
                 onClick={() => handleSort("points")}
@@ -113,17 +163,37 @@ export default function StandingsPage() {
               </th>
             </tr>
           </thead>
+
           <tbody>
-            {data.map((team, index) => (
-              <tr key={index}>
-                <td style={{ padding: "10px", border: "1px solid #333" }}>{team.teamName}</td>
-                <td style={{ padding: "10px", border: "1px solid #333" }}>{team.played}</td>
-                <td style={{ padding: "10px", border: "1px solid #333" }}>{team.wins}</td>
-                <td style={{ padding: "10px", border: "1px solid #333" }}>{team.draws}</td>
-                <td style={{ padding: "10px", border: "1px solid #333" }}>{team.losses}</td>
-                <td style={{ padding: "10px", border: "1px solid #333" }}>{team.goalsFor}</td>
-                <td style={{ padding: "10px", border: "1px solid #333" }}>{team.goalsAgainst}</td>
-                <td style={{ padding: "10px", border: "1px solid #333" }}>{team.points}</td>
+            {data.map((team) => (
+              <tr key={team.teamId}>
+                <td style={{ padding: "10px", border: "1px solid #333" }}>
+                  {team.teamName}
+                </td>
+                <td style={{ padding: "10px", border: "1px solid #333" }}>
+                  {team.played}
+                </td>
+                <td style={{ padding: "10px", border: "1px solid #333" }}>
+                  {team.won}
+                </td>
+                <td style={{ padding: "10px", border: "1px solid #333" }}>
+                  {team.draw}
+                </td>
+                <td style={{ padding: "10px", border: "1px solid #333" }}>
+                  {team.lost}
+                </td>
+                <td style={{ padding: "10px", border: "1px solid #333" }}>
+                  {team.goalsFor}
+                </td>
+                <td style={{ padding: "10px", border: "1px solid #333" }}>
+                  {team.goalsAgainst}
+                </td>
+                <td style={{ padding: "10px", border: "1px solid #333" }}>
+                  {team.goalDifference}
+                </td>
+                <td style={{ padding: "10px", border: "1px solid #333", fontWeight: "bold" }}>
+                  {team.points}
+                </td>
               </tr>
             ))}
           </tbody>
