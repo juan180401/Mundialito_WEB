@@ -3,10 +3,11 @@
 import Link from "next/link";
 
 const cards = [
-  { href: "/teams",     icon: "🛡️", label: "Equipos",            desc: "Ver todos los equipos"  },
-  { href: "/matches",   icon: "🏟️", label: "Partidos",           desc: "Fixture y resultados"   },
+  { href: "/teams",     icon: "🛡️", label: "Equipos",    desc: "Ver todos los equipos"  },
+  { href: "/players",   icon: "👤", label: "Jugadores",   desc: "Ver todos los jugadores" },
+  { href: "/matches",   icon: "🏟️", label: "Partidos",   desc: "Fixture y resultados"   },
   { href: "/standings", icon: "📊", label: "Tabla de Posiciones", desc: "Clasificación general"  },
-  { href: "/scorers",   icon: "🥇", label: "Goleadores",          desc: "Ranking de goles"       },
+  { href: "/scorers",   icon: "🥇", label: "Goleadores",  desc: "Ranking de goles"       },
 ];
 
 export default function Home() {
@@ -87,8 +88,9 @@ export default function Home() {
         }
 
         .mundi-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+          display: flex;
+          flex-wrap: wrap;
+          justify-content: center;
           gap: 20px;
           max-width: 860px;
           width: 100%;
@@ -96,6 +98,7 @@ export default function Home() {
         }
 
         .mundi-card {
+          width: 190px;
           text-decoration: none;
           display: flex;
           flex-direction: column;
@@ -174,7 +177,7 @@ export default function Home() {
           ))}
         </div>
 
-        <p className="mundi-footer">⚽ Temporada 2025</p>
+        <p className="mundi-footer">⚽ Temporada 2025 ⚽</p>
       </main>
     </>
   );
