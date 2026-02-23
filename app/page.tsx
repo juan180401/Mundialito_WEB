@@ -177,7 +177,7 @@ export default function Home() {
           ))}
         </div>
 
-        <p className="mundi-footer">⚽ Temporada 2025 ⚽</p>
+        <p className="mundi-footer">⚽ Temporada 2026 ⚽</p>
       </main>
     </>
   );
