@@ -36,7 +36,6 @@ export default function StandingsPage() {
 
   async function loadStandings() {
     setLoading(true);
-
     try {
       const query = new URLSearchParams({
         pageNumber: pageNumber.toString(),
@@ -52,11 +51,7 @@ export default function StandingsPage() {
       setData(response.data);
       setTotalPages(response.totalPages);
     } catch {
-      setAlert({
-        type: "error",
-        message: "Error al cargar tabla de posiciones",
-      });
-
+      setAlert({ type: "error", message: "Error al cargar tabla de posiciones" });
       setTimeout(() => setAlert(null), 3000);
     } finally {
       setLoading(false);
@@ -77,162 +72,248 @@ export default function StandingsPage() {
   }
 
   function renderArrow(column: string) {
-    if (sortBy !== column) return "⬍";
-    return sortDirection === "asc" ? "⬆" : "⬇";
+    if (sortBy !== column) return <span style={{ color: "#555" }}>⬍</span>;
+    return sortDirection === "asc"
+      ? <span style={{ color: "#f5c518" }}>⬆</span>
+      : <span style={{ color: "#f5c518" }}>⬇</span>;
+  }
+
+  function getPositionStyle(index: number) {
+    const base = { display: "inline-flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, borderRadius: "50%", fontWeight: 700, fontSize: 12, marginRight: 8 };
+    const pos = (pageNumber - 1) * pageSize + index + 1;
+    if (pos === 1) return { ...base, background: "#f5c518", color: "#000" };
+    if (pos === 2) return { ...base, background: "#aaa", color: "#000" };
+    if (pos === 3) return { ...base, background: "#cd7f32", color: "#fff" };
+    return { ...base, background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.45)" };
+  }
+
+  function getDiffColor(diff: number) {
+    if (diff > 0) return "#00dc64";
+    if (diff < 0) return "#ff4d4d";
+    return "rgba(255,255,255,0.5)";
   }
 
   return (
-    <div style={{ border: "1px solid #333", padding: "25px", borderRadius: "8px" }}>
-      <h2 style={{ marginBottom: "20px" }}>Tabla de Posiciones</h2>
-        <div
-        style={{
-            display: "flex",
-            gap: "20px",
-            marginBottom: "20px",
-            alignItems: "center",
-        }}
-        >
-            <label>
-                Registros por página:{" "}
-                <select
-                value={pageSize}
-                onChange={(e) => {
-                    setPageSize(Number(e.target.value));
-                    setPageNumber(1);
-                }}
-                style={{
-                    padding: "6px",
-                    backgroundColor: "#111",
-                    color: "white",
-                    border: "1px solid #555",
-                }}
-                >
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                </select>
-            </label>
+    <>
+      <style>{`
+        .st-wrapper {
+          background: rgba(255,255,255,0.03);
+          border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 16px;
+          padding: 32px;
+          backdrop-filter: blur(10px);
+          font-family: 'Inter', sans-serif;
+        }
+
+        .st-header {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 8px;
+        }
+
+        .st-title {
+          font-size: 24px;
+          font-weight: 800;
+          color: #fff;
+          letter-spacing: 2px;
+          text-transform: uppercase;
+          margin: 0;
+        }
+
+        .st-divider {
+          height: 2px;
+          background: linear-gradient(90deg, #f5c518, transparent);
+          margin-bottom: 28px;
+          border-radius: 2px;
+        }
+
+        .st-controls {
+          display: flex;
+          gap: 20px;
+          margin-bottom: 24px;
+          align-items: center;
+        }
+
+        .st-label {
+          font-size: 12px;
+          color: rgba(255,255,255,0.45);
+          letter-spacing: 1px;
+          text-transform: uppercase;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .st-select {
+          padding: 8px 12px;
+          background: rgba(255,255,255,0.05);
+          color: #fff;
+          border: 1px solid rgba(255,255,255,0.12);
+          border-radius: 8px;
+          font-size: 13px;
+          cursor: pointer;
+          outline: none;
+          transition: border-color 0.2s;
+        }
+
+        .st-select:hover, .st-select:focus { border-color: rgba(245,197,24,0.5); }
+        .st-select option { background: #1a1a1a; }
+
+        .st-loading {
+          text-align: center;
+          color: rgba(255,255,255,0.35);
+          padding: 40px 0;
+          letter-spacing: 2px;
+          font-size: 13px;
+        }
+
+        .st-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 24px;
+        }
+
+        .st-table thead tr {
+          background: rgba(245,197,24,0.08);
+        }
+
+        .st-table th {
+          padding: 12px 10px;
+          border-bottom: 1px solid rgba(245,197,24,0.2);
+          color: rgba(255,255,255,0.55);
+          font-size: 11px;
+          letter-spacing: 1.5px;
+          text-transform: uppercase;
+          text-align: center;
+          cursor: pointer;
+          user-select: none;
+          white-space: nowrap;
+          transition: color 0.2s;
+        }
+
+        .st-table th.left { text-align: left; }
+        .st-table th:hover { color: #f5c518; }
+
+        .st-table td {
+          padding: 11px 10px;
+          border-bottom: 1px solid rgba(255,255,255,0.05);
+          color: rgba(255,255,255,0.8);
+          font-size: 14px;
+          text-align: center;
+        }
+
+        .st-table td.left { text-align: left; }
+
+        .st-table tbody tr { transition: background 0.15s; }
+        .st-table tbody tr:hover { background: rgba(245,197,24,0.04); }
+
+        .st-points {
+          font-weight: 800;
+          color: #f5c518;
+          font-size: 16px;
+        }
+
+        .st-legend {
+          display: flex;
+          gap: 20px;
+          flex-wrap: wrap;
+          margin-top: 8px;
+          font-size: 11px;
+          color: rgba(255,255,255,0.3);
+          letter-spacing: 0.5px;
+        }
+      `}</style>
+
+      <div className="st-wrapper">
+        {/* Header */}
+        <div className="st-header">
+          <span style={{ fontSize: 28 }}>📊</span>
+          <h2 className="st-title">Tabla de Posiciones</h2>
         </div>
-      {alert && <AlertMessage type={alert.type} message={alert.message} />}
+        <div className="st-divider" />
 
-      {loading && <p>Cargando...</p>}
+        {alert && <AlertMessage type={alert.type} message={alert.message} />}
 
-      {!loading && (
-        <table
-          style={{
-            width: "100%",
-            borderCollapse: "collapse",
-            marginBottom: "20px",
-          }}
-        >
-          <thead>
-            <tr style={{ backgroundColor: "#1a1a1a" }}>
-              <th
-                style={{ padding: "10px", border: "1px solid #444", cursor: "pointer" }}
-                onClick={() => handleSort("teamName")}
-              >
-                Equipo {renderArrow("teamName")}
-              </th>
+        {/* Controles */}
+        <div className="st-controls">
+          <label className="st-label">
+            Por página:
+            <select
+              className="st-select"
+              value={pageSize}
+              onChange={(e) => { setPageSize(Number(e.target.value)); setPageNumber(1); }}
+            >
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+            </select>
+          </label>
+        </div>
 
-              <th
-                style={{ padding: "10px", border: "1px solid #444", cursor: "pointer" }}
-                onClick={() => handleSort("played")}
-              >
-                PJ {renderArrow("played")}
-              </th>
+        {loading && <p className="st-loading">⚽ Cargando...</p>}
 
-              <th
-                style={{ padding: "10px", border: "1px solid #444", cursor: "pointer" }}
-                onClick={() => handleSort("won")}
-              >
-                G {renderArrow("won")}
-              </th>
+        {!loading && (
+          <>
+            <table className="st-table">
+              <thead>
+                <tr>
+                  <th style={{ width: 36 }}>#</th>
+                  <th className="left" onClick={() => handleSort("teamName")}>Equipo {renderArrow("teamName")}</th>
+                  <th onClick={() => handleSort("played")}>PJ {renderArrow("played")}</th>
+                  <th onClick={() => handleSort("won")}>G {renderArrow("won")}</th>
+                  <th onClick={() => handleSort("draw")}>E {renderArrow("draw")}</th>
+                  <th onClick={() => handleSort("lost")}>P {renderArrow("lost")}</th>
+                  <th onClick={() => handleSort("goalsFor")}>GF {renderArrow("goalsFor")}</th>
+                  <th onClick={() => handleSort("goalsAgainst")}>GC {renderArrow("goalsAgainst")}</th>
+                  <th onClick={() => handleSort("goalDifference")}>DG {renderArrow("goalDifference")}</th>
+                  <th onClick={() => handleSort("points")}>Pts {renderArrow("points")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.map((team, index) => {
+                  const pos = (pageNumber - 1) * pageSize + index + 1;
+                  return (
+                    <tr key={team.teamId}>
+                      <td>
+                        <span style={getPositionStyle(index)}>{pos}</span>
+                      </td>
+                      <td className="left">{team.teamName}</td>
+                      <td>{team.played}</td>
+                      <td style={{ color: "#00dc64" }}>{team.won}</td>
+                      <td style={{ color: "rgba(255,255,255,0.5)" }}>{team.draw}</td>
+                      <td style={{ color: "#ff4d4d" }}>{team.lost}</td>
+                      <td>{team.goalsFor}</td>
+                      <td>{team.goalsAgainst}</td>
+                      <td style={{ color: getDiffColor(team.goalDifference), fontWeight: 600 }}>
+                        {team.goalDifference > 0 ? `+${team.goalDifference}` : team.goalDifference}
+                      </td>
+                      <td><span className="st-points">{team.points}</span></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
 
-              <th
-                style={{ padding: "10px", border: "1px solid #444", cursor: "pointer" }}
-                onClick={() => handleSort("draw")}
-              >
-                E {renderArrow("draw")}
-              </th>
+            <div className="st-legend">
+              <span>PJ = Partidos Jugados</span>
+              <span>G = Ganados</span>
+              <span>E = Empatados</span>
+              <span>P = Perdidos</span>
+              <span>GF = Goles a Favor</span>
+              <span>GC = Goles en Contra</span>
+              <span>DG = Diferencia de Goles</span>
+              <span>Pts = Puntos</span>
+            </div>
+          </>
+        )}
 
-              <th
-                style={{ padding: "10px", border: "1px solid #444", cursor: "pointer" }}
-                onClick={() => handleSort("lost")}
-              >
-                P {renderArrow("lost")}
-              </th>
-
-              <th
-                style={{ padding: "10px", border: "1px solid #444", cursor: "pointer" }}
-                onClick={() => handleSort("goalsFor")}
-              >
-                GF {renderArrow("goalsFor")}
-              </th>
-
-              <th
-                style={{ padding: "10px", border: "1px solid #444", cursor: "pointer" }}
-                onClick={() => handleSort("goalsAgainst")}
-              >
-                GC {renderArrow("goalsAgainst")}
-              </th>
-
-              <th
-                style={{ padding: "10px", border: "1px solid #444", cursor: "pointer" }}
-                onClick={() => handleSort("goalDifference")}
-              >
-                DG {renderArrow("goalDifference")}
-              </th>
-
-              <th
-                style={{ padding: "10px", border: "1px solid #444", cursor: "pointer" }}
-                onClick={() => handleSort("points")}
-              >
-                Pts {renderArrow("points")}
-              </th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {data.map((team) => (
-              <tr key={team.teamId}>
-                <td style={{ padding: "10px", border: "1px solid #333" }}>
-                  {team.teamName}
-                </td>
-                <td style={{ padding: "10px", border: "1px solid #333" }}>
-                  {team.played}
-                </td>
-                <td style={{ padding: "10px", border: "1px solid #333" }}>
-                  {team.won}
-                </td>
-                <td style={{ padding: "10px", border: "1px solid #333" }}>
-                  {team.draw}
-                </td>
-                <td style={{ padding: "10px", border: "1px solid #333" }}>
-                  {team.lost}
-                </td>
-                <td style={{ padding: "10px", border: "1px solid #333" }}>
-                  {team.goalsFor}
-                </td>
-                <td style={{ padding: "10px", border: "1px solid #333" }}>
-                  {team.goalsAgainst}
-                </td>
-                <td style={{ padding: "10px", border: "1px solid #333" }}>
-                  {team.goalDifference}
-                </td>
-                <td style={{ padding: "10px", border: "1px solid #333", fontWeight: "bold" }}>
-                  {team.points}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-
-      <Pagination
-        pageNumber={pageNumber}
-        totalPages={totalPages}
-        onPageChange={(page) => setPageNumber(page)}
-      />
-    </div>
+        <Pagination
+          pageNumber={pageNumber}
+          totalPages={totalPages}
+          onPageChange={(page) => setPageNumber(page)}
+        />
+      </div>
+    </>
   );
 }
